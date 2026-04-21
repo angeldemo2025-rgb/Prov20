@@ -3,28 +3,28 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Inventario PRO CREATOR + VIEW</title>
+<title>Inventario PRO SAAS</title>
 
 <style>
 body{margin:0;font-family:Arial;background:#f5f7ff;}
-header{background:#2563eb;color:white;padding:14px;font-weight:bold;}
+header{background:#2563eb;color:#fff;padding:14px;font-weight:bold;}
 .container{max-width:900px;margin:auto;padding:15px;}
-.card{background:white;padding:15px;border-radius:12px;margin-bottom:12px;}
+.card{background:#fff;padding:15px;border-radius:12px;margin-bottom:12px;}
 input{width:100%;padding:10px;margin:6px 0;}
 button{padding:10px;border:none;border-radius:8px;background:#2563eb;color:white;cursor:pointer;}
 .row{display:flex;gap:10px;flex-wrap:wrap;}
 .item{display:grid;grid-template-columns:1fr 1fr 40px;gap:10px;margin-top:8px;}
 .hidden{display:none;}
-small{color:#64748b;}
+pre{white-space:pre-wrap;}
 </style>
 
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
-
 </head>
+
 <body>
 
-<header>📦 INVENTARIO PRO</header>
+<header>📦 provs20</header>
 
 <div class="container">
 
@@ -51,38 +51,38 @@ small{color:#64748b;}
 
 <!-- VIEW -->
 <div class="card hidden" id="view">
-  <h3>📊 Respuestas</h3>
-  <div id="responses"></div>
-  <button onclick="goHome()">⬅ Volver</button>
+  <h3>📊 Reportes</h3>
+  <div id="reports"></div>
+  <button onclick="home()">⬅ Volver</button>
 </div>
 
 </div>
 
 <script>
 
-const firebaseConfig={
-apiKey:"AIzaSyD0HNFfvNqjYMspNtNFgRxy2segtsRspGo",
-authDomain:"t3-2-1a478.firebaseapp.com",
-databaseURL:"https://t3-2-1a478-default-rtdb.firebaseio.com",
-projectId:"t3-2-1a478"
+const firebaseConfig = {
+  apiKey: "AIzaSyD0HNFfvNqjYMspNtNFgRxy2segtsRspGo",
+  authDomain: "t3-2-1a478.firebaseapp.com",
+  databaseURL: "https://t3-2-1a478-default-rtdb.firebaseio.com",
+  projectId: "t3-2-1a478"
 };
 
 firebase.initializeApp(firebaseConfig);
-const db=firebase.database();
+const db = firebase.database();
 
-let currentId=null;
-let data={items:[]};
+let currentId = null;
+let data = { items: [] };
 
 /* CREATE */
 function create(){
-const name=document.getElementById("name").value;
+const name = document.getElementById("name").value;
 if(!name) return;
 
-const id=db.ref("forms").push().key;
+const id = db.ref("forms").push().key;
 
 db.ref("forms/"+id).set({
 name,
-slug:name.toLowerCase().replace(/\s+/g,'-'),
+slug: name.toLowerCase().replace(/\s+/g,'-'),
 items:[]
 });
 
@@ -92,15 +92,15 @@ load();
 
 /* OPEN EDITOR */
 function open(id){
-currentId=id;
+currentId = id;
 
 db.ref("forms/"+id).once("value",s=>{
-data=s.val();
+data = s.val();
 
 document.getElementById("creator").classList.add("hidden");
 document.getElementById("editor").classList.remove("hidden");
 
-document.getElementById("title").innerText=data.name;
+document.getElementById("title").innerText = data.name;
 
 render();
 });
@@ -108,11 +108,11 @@ render();
 
 /* RENDER */
 function render(){
-let box=document.getElementById("items");
-box.innerHTML="";
+let box = document.getElementById("items");
+box.innerHTML = "";
 
-(data.items||[]).forEach((i,index)=>{
-box.innerHTML+=`
+(data.items || []).forEach((i,index)=>{
+box.innerHTML += `
 <div class="item">
 <input value="${i.n||""}" oninput="edit(${index},'n',this.value)">
 <input value="${i.q||""}" maxlength="2" oninput="edit(${index},'q',this.value)">
@@ -129,7 +129,7 @@ render();
 
 /* EDIT */
 function edit(i,k,v){
-data.items[i][k]=v;
+data.items[i][k] = v;
 }
 
 /* DELETE */
@@ -138,34 +138,45 @@ data.items.splice(i,1);
 render();
 }
 
-/* SAVE */
+/* SAVE REPORT */
 function save(){
 db.ref("forms/"+currentId).update(data);
+
+db.ref("reports/"+currentId).push({
+data,
+date: Date.now()
+});
+
 alert("Guardado ✔");
 }
 
-/* SHARE */
+/* SHARE (WhatsApp + nativo celular) */
 function share(){
 db.ref("forms/"+currentId).once("value",s=>{
-const d=s.val();
-const link=window.location.origin+"/v/"+d.slug;
+const d = s.val();
+const link = window.location.origin + "/view/" + d.slug;
 
-window.open(
-"https://wa.me/?text="+encodeURIComponent("📦 Ver formulario:\n"+link),
-"_blank"
-);
+if(navigator.share){
+navigator.share({
+title:"Inventario",
+text:"Mira este formulario",
+url: link
+});
+}else{
+window.open("https://wa.me/?text="+encodeURIComponent(link));
+}
 });
 }
 
 /* LOAD LIST */
 function load(){
 db.ref("forms").on("value",s=>{
-let d=s.val()||{};
-let box=document.getElementById("list");
-box.innerHTML="";
+const d = s.val() || {};
+const box = document.getElementById("list");
+box.innerHTML = "";
 
 Object.entries(d).forEach(([id,f])=>{
-box.innerHTML+=`
+box.innerHTML += `
 <div>
 <b>${f.name}</b>
 <button onclick="open('${id}')">Abrir</button>
@@ -177,13 +188,16 @@ box.innerHTML+=`
 
 /* VIEW */
 function view(id){
-db.ref("responses/"+id).once("value",s=>{
-let d=s.val()||{};
-let box=document.getElementById("responses");
-box.innerHTML="";
+db.ref("reports/"+id).once("value",s=>{
+const d = s.val() || {};
+const box = document.getElementById("reports");
+box.innerHTML = "";
 
 Object.values(d).forEach(r=>{
-box.innerHTML+=`<div class="item">${JSON.stringify(r)}</div>`;
+box.innerHTML += `
+<div class="item">
+<pre>${JSON.stringify(r.data,null,2)}</pre>
+</div>`;
 });
 
 document.getElementById("creator").classList.add("hidden");
@@ -192,16 +206,34 @@ document.getElementById("view").classList.remove("hidden");
 });
 }
 
+/* ROUTER VERCEL */
+function router(){
+const path = window.location.pathname;
+
+if(path.startsWith("/view/")){
+const slug = path.replace("/view/","");
+
+db.ref("forms").once("value",s=>{
+const forms = s.val() || {};
+
+const found = Object.entries(forms)
+.find(([id,f]) => f.slug === slug);
+
+if(found){
+view(found[0]);
+}
+});
+}
+}
+
 /* BACK */
-function back(){
-location.reload();
-}
+function back(){location.reload();}
+function home(){location.reload();}
 
-function goHome(){
-location.reload();
-}
-
+window.onload = function(){
 load();
+router();
+};
 
 </script>
 
