@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Inventario PRO CREATOR + VIEW</title>
+
+<style>
+body{margin:0;font-family:Arial;background:#f5f7ff;}
+header{background:#2563eb;color:white;padding:14px;font-weight:bold;}
+.container{max-width:900px;margin:auto;padding:15px;}
+.card{background:white;padding:15px;border-radius:12px;margin-bottom:12px;}
+input{width:100%;padding:10px;margin:6px 0;}
+button{padding:10px;border:none;border-radius:8px;background:#2563eb;color:white;cursor:pointer;}
+.row{display:flex;gap:10px;flex-wrap:wrap;}
+.item{display:grid;grid-template-columns:1fr 1fr 40px;gap:10px;margin-top:8px;}
+.hidden{display:none;}
+small{color:#64748b;}
+</style>
+
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+
+</head>
+<body>
+
+<header>📦 INVENTARIO PRO</header>
+
+<div class="container">
+
+<!-- CREATOR -->
+<div class="card" id="creator">
+  <h3>Crear formulario</h3>
+  <input id="name" placeholder="Nombre formulario">
+  <button onclick="create()">Crear</button>
+  <div id="list"></div>
+</div>
+
+<!-- EDITOR -->
+<div class="card hidden" id="editor">
+  <div class="row">
+    <button onclick="back()">⬅</button>
+    <button onclick="add()">➕</button>
+    <button onclick="save()">💾 Guardar</button>
+    <button onclick="share()">📤 Compartir</button>
+  </div>
+
+  <h3 id="title"></h3>
+  <div id="items"></div>
+</div>
+
+<!-- VIEW -->
+<div class="card hidden" id="view">
+  <h3>📊 Respuestas</h3>
+  <div id="responses"></div>
+  <button onclick="goHome()">⬅ Volver</button>
+</div>
+
+</div>
+
+<script>
+
+const firebaseConfig={
+apiKey:"AIzaSyD0HNFfvNqjYMspNtNFgRxy2segtsRspGo",
+authDomain:"t3-2-1a478.firebaseapp.com",
+databaseURL:"https://t3-2-1a478-default-rtdb.firebaseio.com",
+projectId:"t3-2-1a478"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db=firebase.database();
+
+let currentId=null;
+let data={items:[]};
+
+/* CREATE */
+function create(){
+const name=document.getElementById("name").value;
+if(!name) return;
+
+const id=db.ref("forms").push().key;
+
+db.ref("forms/"+id).set({
+name,
+slug:name.toLowerCase().replace(/\s+/g,'-'),
+items:[]
+});
+
+open(id);
+load();
+}
+
+/* OPEN EDITOR */
+function open(id){
+currentId=id;
+
+db.ref("forms/"+id).once("value",s=>{
+data=s.val();
+
+document.getElementById("creator").classList.add("hidden");
+document.getElementById("editor").classList.remove("hidden");
+
+document.getElementById("title").innerText=data.name;
+
+render();
+});
+}
+
+/* RENDER */
+function render(){
+let box=document.getElementById("items");
+box.innerHTML="";
+
+(data.items||[]).forEach((i,index)=>{
+box.innerHTML+=`
+<div class="item">
+<input value="${i.n||""}" oninput="edit(${index},'n',this.value)">
+<input value="${i.q||""}" maxlength="2" oninput="edit(${index},'q',this.value)">
+<button onclick="removeItem(${index})">🗑</button>
+</div>`;
+});
+}
+
+/* ADD */
+function add(){
+data.items.push({n:"",q:""});
+render();
+}
+
+/* EDIT */
+function edit(i,k,v){
+data.items[i][k]=v;
+}
+
+/* DELETE */
+function removeItem(i){
+data.items.splice(i,1);
+render();
+}
+
+/* SAVE */
+function save(){
+db.ref("forms/"+currentId).update(data);
+alert("Guardado ✔");
+}
+
+/* SHARE */
+function share(){
+db.ref("forms/"+currentId).once("value",s=>{
+const d=s.val();
+const link=window.location.origin+"/v/"+d.slug;
+
+window.open(
+"https://wa.me/?text="+encodeURIComponent("📦 Ver formulario:\n"+link),
+"_blank"
+);
+});
+}
+
+/* LOAD LIST */
+function load(){
+db.ref("forms").on("value",s=>{
+let d=s.val()||{};
+let box=document.getElementById("list");
+box.innerHTML="";
+
+Object.entries(d).forEach(([id,f])=>{
+box.innerHTML+=`
+<div>
+<b>${f.name}</b>
+<button onclick="open('${id}')">Abrir</button>
+<button onclick="view('${id}')">View</button>
+</div>`;
+});
+});
+}
+
+/* VIEW */
+function view(id){
+db.ref("responses/"+id).once("value",s=>{
+let d=s.val()||{};
+let box=document.getElementById("responses");
+box.innerHTML="";
+
+Object.values(d).forEach(r=>{
+box.innerHTML+=`<div class="item">${JSON.stringify(r)}</div>`;
+});
+
+document.getElementById("creator").classList.add("hidden");
+document.getElementById("editor").classList.add("hidden");
+document.getElementById("view").classList.remove("hidden");
+});
+}
+
+/* BACK */
+function back(){
+location.reload();
+}
+
+function goHome(){
+location.reload();
+}
+
+load();
+
+</script>
+
+</body>
+</html>
